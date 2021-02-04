@@ -1,0 +1,73 @@
+---
+title: "Faculty_Homework"
+author: "Mike Hatfield"
+date: "2/4/2021"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(rvest)
+library(stringr)
+
+faculty_html <- read_html("https://guide.wisc.edu/faculty/")
+chunks <- html_nodes(faculty_html, ".uw-people p")
+strings <- rep("none", length(chunks))
+for (i in 1:length(chunks)) {
+  xml_find_all(chunks[i], ".//br") %>% xml_add_sibling("p", "\n")
+  xml_find_all(chunks[i], ".//br") %>% xml_remove()
+  strings[i] = html_text(chunks[i]) %>% str_trim()
+}
+
+firstname <- rep("none", length(strings))
+lastname <- rep("none", length(strings))
+role <- rep("none", length(strings))
+department <- rep("none", length(strings))
+education <- rep("none", length(strings))
+
+for (i in 1:length(strings)) {
+ps <- strsplit(strings[i], "\n")
+name <- strsplit(ps[[1]][1], ",")
+firstname[i] = str_trim(name[[1]][2])
+lastname[i] = name[[1]][1]
+role[i] = ps[[1]][2]
+department[i] = ps[[1]][3]
+education[i] = ps[[1]][4]
+}
+
+middlename <- rep(NA, length(firstname))
+
+for (i in 1: length(firstname)) {
+  if(is.na(str_locate(firstname[i], " ")[1])) {
+    firstn = firstname[i]
+    middlen = NA
+  }
+  else {
+    firstn = substring(firstname[i], 1, str_locate(firstname[i], " ")[1]-1)
+    middlen = substring(firstname[i], str_locate(firstname[i], " ")[1]+1, nchar(firstname[i]))
+  }
+  firstname[i] = firstn
+  middlename[i] = middlen
+}
+
+faculty <- data.frame("First" = firstname, "Middle" = middlename,
+                      "Last" = lastname,
+                      "Position" = role, "Department" = department,
+                      "Degree" = education)
+
+faculty$Department <- as.factor(faculty$Department)
+faculty$Position <- as.factor(faculty$Position)
+
+#summary(faculty)
+
+write.csv(faculty, file = "faculty.csv")
+
+```
+
+```{r}
+head(faculty)
+```
+
